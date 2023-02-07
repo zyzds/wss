@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>网络存储系统</title>
+    <link rel="stylesheet" href="../static/layui/css/layui.css">
+    <script src="../static/layui/layui.js"></script>
+    <script type="text/javascript">
+        layui.use(['layer'], function(){
+            var layer = layui.layer;
+        });
+    </script>
+</head>
+<body style="background-color: #f7f7f7;">
+    <div class="">
+        <div th:insert="head::head"></div>
+        <div th:insert="wangpan::wangpan" class="nav-content" id="key-1"></div>
+        <div th:insert="notify::notify" class="nav-content" id="key-2" style="display: none;"></div>
+        <div th:insert="tool::tool" class="nav-content" id="key-3" style="display: none;"></div>
+    </div>
+</body>
+</html>

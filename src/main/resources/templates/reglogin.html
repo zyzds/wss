@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>登录/注册</title>
+    <link rel="stylesheet" href="../static/layui/css/layui.css">
+</head>
+<body>
+    <div class="layui-container">
+        <div class="layui-tab layui-row">
+            <ul class="layui-tab-title" style="width: 60%;left: 20%;">
+              <li class="layui-this">用户登录</li>
+              <li>用户注册</li>
+            </ul>
+            <div class="layui-tab-content">
+                <div class="layui-tab-item layui-show">
+                    <form action="" method="post" class="layui-col-md4 layui-col-md-offset4 layui-form" id="form-login">
+                        <div class="layui-form-item">
+                            <label for="nameOrEmail" class="layui-form-label">用户名/邮箱</label>
+                            <div class="layui-input-block">
+                                <input class="layui-input" id="nameOrEmail" type="text" name="nameOrEmail"  required="required" autofocus>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label for="password" class="layui-form-label">密码</label>
+                            <div class="layui-input-block">
+                                <input class="layui-input" id="password" type="password" name="password" required="required">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label for="password" class="layui-form-label">记住我</label>
+                            <div class="layui-input-block">
+                                <input type="checkbox" name="switch" lay-skin="switch">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button class="layui-btn layui-btn-fluid" lay-submit id="button-login">登录</button>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <a href="">忘记密码?</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="layui-tab-item">
+                    <form action="user/register" method="post" class="layui-col-md6 layui-col-md-offset4 layui-form" id="form-register">
+                        <div class="layui-form-item">
+                            <label for="email" class="layui-form-label">邮箱</label>
+                            <div class="layui-input-inline">
+                                <input class="layui-input" type="email" id="email" name="email" required="required" autofocus>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label for="name" class="layui-form-label">用户名</label>
+                            <div class="layui-input-inline">
+                                <input class="layui-input" type="text" id="name" name="name" required="required" pattern="[\u4e00-\u9fa5A-Za-z]{3,10}" autofocus>
+                            </div>
+                            <div class="layui-form-mid layui-word-aux" id="tip">3~10位汉字、字母</div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label for="password" class="layui-form-label">密码</label>
+                            <div class="layui-input-inline">
+                                <input class="layui-input" type="password" name="password" required="required" pattern="[\d]{6,20}">
+                            </div>
+                            <div class="layui-form-mid layui-word-aux">6~20位数字</div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label for="againPassword" class="layui-form-label">确认密码</label>
+                            <div class="layui-input-inline">
+                                <input class="layui-input" type="password" name="again" id="againPassword" required="required">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label for="verify" class="layui-form-label">验证信息</label>
+                            <div class="layui-input-inline">
+                                <input class="layui-input" type="text" name="answer" id="verify" required="required">
+                                <input type="hidden" name="id" th:value="${session.id}">
+                            </div>
+                            <div class="layui-inline" id="verify_image">
+                                <img src="" onclick="refreshVCode()"></div>
+                        </div>
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button class="layui-btn" lay-submit lay-filter="form">注册</button>
+                                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../static/js/jquery-3.3.1.js"></script>
+    <script src="../static/layui/layui.js"></script>
+    <script>
+        window.onload = function() {
+            $("#verify_image").find("img").height($("#verify").height());
+            refreshVCode();
+        }
+
+        layui.use(['element', 'form', 'table'], function(){
+            var element = layui.element;
+        });
+    
+        layui.use("layer", function () {
+            var layer = layui.layer;
+        });
+        
+        var regForm = $("#form-register");
+
+        function myCheck() {
+            let password = regForm.find("input[name=password]").val();
+            let agian = $("#againPassword").val();
+            if (password !== agian) {
+                layer.msg("两次输入的密码不正确，请更正", {offset: '200px'});
+                return false;
+            } else {
+                return true;
+            }
+        };
+        
+        //验证码点击
+        var ci = true;
+        function refreshVCode(){
+            let img = $("#verify_image>img");
+            if (ci) {
+                let id = Math.random();
+                img.attr("src", "/user/verifyImage?id=" + id);
+                $("input[name=id]").val(id);
+                ci = false;
+                setTimeout(() => {
+                    ci = true;
+                }, 3000);
+                setTimeout(() => {
+                    img.attr("src", "../static/images/discard.png");
+                }, 3 * 60 * 60 * 1000);    //3min
+            } else {
+                alert("click too fast.");
+            }
+        }
+
+        /* regForm.find("input[name='name']").blur(function () {
+            alert("aa")
+            var userName = $("#userName");
+            var tip = $("#tip");
+            if (userName.val() != null && userName.val() !== '') {
+                $.ajax({
+                    url: "user/checkUserName",
+                    data: {userName: this.value},
+                    dataType: "text",
+                    success: function (data) {
+                        if ($("#msg") != null) {
+                            $("#msg").remove();
+                        }
+                        if (data === "用户已存在") {
+                            layer.msg(data, {offset: '200px'});
+                        } else {
+                            tip.before("<i id='msg' class='layui-form-mid layui-icon layui-icon-ok-circle'></i>");
+                        }
+                    }
+                });
+            }
+        }); */
+    
+        regForm.submit(function () {
+            if (!myCheck()) {
+                return false;
+            }
+            let verifyResult = true;
+            $.ajax({
+                url: "/user/verifyCheck",
+                type: "POST",
+                dataType: "json",
+                async: false,
+                data: {id: $("input[name=id]").val(), answer: $("input[name=answer]").val()},
+                success: function (result) {
+                    if (result) {
+                        $.ajax({
+                            url: "/user/regist",
+                            type: "POST",
+                            dataType: "json",
+                            data: $("#form-register").serialize(),
+                            success: function (result) {
+                                if (result.result == 0) {
+                                    layer.msg(result.reason, {offset: '200px'});
+                                } else {
+                                    layer.msg("注册成功！账号激活邮件已发送到你的邮箱，请及时激活，并在此页面登录", {offset: '200px'}, function(){
+                                        window.location.reload();
+                                    });
+                                }
+                            }
+                        });
+                    } else {
+                        layer.msg("验证码错误，请重试！", {offset: '200px'});
+                    }
+                }
+            });
+            return false;
+        });
+
+        $("#form-login").submit(function () {
+            $.ajax({
+                url: "/user/login",
+                type: "POST",
+                dataType: "json",
+                data: $("#form-login").serialize(),
+                success: function (result) {
+                    if (result.result == 0) {
+                        layer.msg(result.reason, {offset: '200px'});
+                    } else {
+                        layer.msg("登录成功！正在跳转...", {offset: '200px'}, function() {
+                            window.location.href = "/index";
+                        });
+                    }
+                }
+            });
+        return false;
+    });
+    </script>
+</body>
+</html>

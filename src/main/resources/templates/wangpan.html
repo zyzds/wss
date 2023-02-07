@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <div class="" th:fragment="wangpan">
+        <div class="layui-row" id="wangpan">
+            <ul class="layui-nav layui-nav-tree layui-nav-side layui-col-md2" style="top: 60px;">
+                <li class="layui-nav-item layui-nav-itemed">
+                    <a href="javascript:;">文件分类</a>
+                    <dl class="layui-nav-child">
+                        <dd th:each="cate, status: ${cateList}"><a href="javascript:;" th:attr="data-cateId=${cate.id}" th:onclick="toCate([[${cate.id}]])" th:text="${cate.name}"></a></dd>
+                        <dd><a href="javascript:void(0)" onclick="addCategory()"><i class="layui-icon layui-icon-addition"></i>添加分类</a></dd>
+                    </dl>
+                </li>
+                <li class="layui-nav-item"><a href="javascript:void(0);" onclick="toBin()">回收站</a></li>
+            </ul>
+            <div class="layui-col-md10 layui-col-md-offset2" style="top: 80px;">
+                <div class="layui-row" id="uploadBar">
+                    <div class="layui-btn-container layui-col-md4">
+                        <div class="layui-btn layui-btn-normal layui-btn-sm" id="picker"></div>
+                        <button type="button" class="layui-btn layui-btn-normal layui-btn-sm" id="pickers" webkitdirectory>上传文件夹</button>
+                    </div>
+                    <form class="layui-form layui-col-md3 layui-col-md-offset5" action="">
+                        <div class="layui-form-item">
+                            <div class="layui-input-inline">
+                                <input type="text" name="keyword" required  lay-verify="required" placeholder="搜索你的文件" autocomplete="off" class="layui-input">
+                                
+                            </div>
+                            <span class="layui-form-mid layui-word-aux"><i class="layui-icon" onclick="search()">&#xe615;</i></span>
+                        </div>
+                    </form>
+                </div>
+                <div class="layui-row">
+                    <table class="layui-table" id="fileList" lay-filter='fileList'>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <script type="text/html" id="toolbar">
+            <div class="layui-btn-container">
+                <button class="layui-btn layui-btn-sm" lay-event="return">返回上一级</button>
+                <button class="layui-btn layui-btn-sm" lay-event="addFolder">新建文件夹</button>
+            </div>
+        </script>
+
+        <script type="text/html" id="toolbarBin">
+            <div class="layui-btn-container">
+            </div>
+        </script>
+
+        <script type="text/html" id="titleTpl">
+            {{#  if(d.type === 'folder'){ }}
+            <i class="layui-icon layui-icon-layer"></i>&nbsp;&nbsp;&nbsp;<a href="javascript:void(0)" onclick="changeFileDisplay('{{d.id}}')" class="layui-table-link">{{d.name}}</a>
+            {{#  } else { }}
+            <i class="layui-icon layui-icon-file"></i>&nbsp;&nbsp;&nbsp;<a href="javascript:window.location.href='/WSSComponent/file/show/{{d.id}}'" class="layui-table-link">{{d.name}}</a>
+            {{#  } }}
+        </script>
+
+        <script type="text/html" id="titleTplBin">
+            {{#  if(d.type === 'folder'){ }}
+            <i class="layui-icon layui-icon-layer"></i>&nbsp;&nbsp;&nbsp;<a href="javascript:void(0)" class="layui-table-link">{{d.name}}</a>
+            {{#  } else { }}
+            <i class="layui-icon layui-icon-file"></i>&nbsp;&nbsp;&nbsp;<a href="javascript:void(0)">{{d.name}}</a>
+            {{#  } }}
+        </script>
+
+        <script src="../static/js/jquery-3.3.1.js"></script>
+        <!--webuploader-->
+        <link rel="stylesheet" type="text/css" href="../static/webuploader-0.1.5/webuploader.css">
+        <script type="text/javascript" src="../static/webuploader-0.1.5/webuploader.js"></script>
+<!--         <script src="../static/layui/layui.js"></script> -->
+
+        <script type="text/javascript">
+            var parentId = [];
+
+            var moveIdList = [];
+
+            var copyIdList = [];
+
+            layui.use('table', function(){
+                window.table = layui.table;
+
+                table.render({
+                    elem: '#fileList'
+                    ,height: 'full-165'
+                    ,url: '/WSSComponent/folder' //数据接口
+                    ,limit:'10000'
+                    ,skin:'line'
+                    ,toolbar: '#toolbar'
+                    ,defaultToolbar: []
+                    ,cols: [
+                        [ //表头
+                    {width:'5%', type:'checkbox'}
+                    ,{field:'id', width:'5%', hide: 'true'}
+                    ,{field:'name', width: '50%', sort: true, edit:
+                                'text', templet: '#titleTpl', style: 'font-size: 16px;', title: '文件名'}
+                    ,{field:'cate', width: '10%', sort: true, style: 'font-size: 16px;', title: '分类'}
+                    ,{field:'type', hide: true}
+                    ,{field:'size', width:'10%', sort: true, style: 'font-size: 16px;',title: '大小'}
+                    ,{field:'updateTime', width:'25%', sort: true, style: 'font-size: 16px;',title: '修改时间'}
+                    ]
+                    ]
+                });
+
+                //监听事件
+                table.on('toolbar(fileList)', function(obj){
+                    var checkStatus = table.checkStatus(obj.config.id);
+
+                    let id = peek(parentId);
+                    id = id === undefined ? '' : id;
+
+                    console.log(checkStatus);
+                    
+                    switch(obj.event){
+                        case 'download':
+                            if (checkStatus.data.length !== 1) {
+                                layer.msg("请选择一条数据！");
+                            } else if (checkStatus.data[0].type === 'folder') {
+                                layer.msg("请选择文件！");
+                            } else {
+                                window.open("/WSSComponent/download?id=" + checkStatus.data[0].id, "_self");
+                                layer.msg("正在下载...");
+                            }
+                        break;
+                        case 'discard':
+                            if (checkStatus.data.length === 0) {
+                                layer.msg("请选择数据！");
+                            } else {
+                                layer.confirm('将会将所有文件移入回收站，确认删除？', {
+                                btn: ['是','否'] //按钮
+                                }, function(){
+                                    let jsonArray = [];
+                                    for (let i = 0; i < checkStatus.data.length; i++) {
+                                        jsonArray.push({id: checkStatus.data[i].id, type: checkStatus.data[i].type});
+                                    }
+                                    $.ajax({
+                                        url: '/WSSComponent/delete',
+                                        data: {'jsonArray': JSON.stringify(jsonArray)},
+                                        dataType: 'JSON',
+                                        type: 'POST',
+                                        success: function(result) {
+                                            layer.msg("成功删除了"+ result + "条数据!", {
+                                                end: function(){
+                                                    window.location.reload()
+                                                }
+                                            });
+                                        }
+                                    });
+                                }, function(){});
+                            }
+                            //layer.msg('删除');
+                        break;
+                        case 'return':
+                            if (parentId.length === 1) {
+                                url = '/WSSComponent/folder';
+                                parentId.pop();
+                            } else if (parentId.length < 1) {
+                                layer.msg("当前已是第一级!");
+                            } else {
+                                parentId.pop();
+                                url = '/WSSComponent/folder/' + peek(parentId);
+                            }
+                            table.reload("fileList", {
+                                url: url,
+                            })
+                            doFixToolbar();
+                        break;
+                        case 'addFolder':
+                            layer.prompt({
+                                value: '',
+                                title: '请输入目录名',
+                                area: ['800px', '350px'] //自定义文本域宽高
+                                }, function(value, index, elem){
+                                layer.close(index);
+                                $.ajax({
+                                    url: '/WSSComponent/addFolder',
+                                    data: {'id': id, 'name': value},
+                                    dataType: 'JSON',
+                                    type: 'POST',
+                                    success: function(resp) {
+                                        switch (resp) {
+                                            case -1: msg = '参数错误！';break;
+                                            case 0: msg = '无记录！';break;
+                                            case 1: msg = '新建文件夹成功！';break;
+                                        }
+                                        layer.msg(msg);
+                                        table.reload('fileList', {
+                                            url: '/WSSComponent/folder/' + id
+                                        });
+                                    }
+                                });
+                            });
+                        break;
+                        case 'move':
+                            moveIdList = [];
+                            $.each(table.checkStatus('fileList').data, function(i, data){
+                                moveIdList.push(data.id);
+                            });
+                            $(".layui-table-tool .layui-btn-container").append('<button class="layui-btn layui-btn-sm" id="btn_doMove" lay-event="doMove">移动至</button><button class="layui-btn layui-btn-sm" id="btn_cancel" lay-event="cancel">取消</button>');
+                        break;
+                        case 'copy': 
+                            copyIdList = [];
+                            $.each(table.checkStatus('fileList').data, function(i, data){
+                                copyIdList.push(data.id);
+                            });
+                            let toobar = $(".layui-table-tool .layui-btn-container");
+                            toobar.append('<button class="layui-btn layui-btn-sm" id="btn_doCopy" lay-event="doCopy">复制至</button>');
+                            if ($(toolbar).find("#btn_cancel").length === 0) {
+                                toobar.append('<button class="layui-btn layui-btn-sm" id="btn_cancel" lay-event="cancel">取消</button>');
+                            }
+                        break;
+                        case 'cancel':
+                            moveIdList = [];
+                            copyIdList = [];
+                            table.reload('fileList', {
+                                url: '/WSSComponent/folder/' + id
+                            });
+                        break;
+                        case 'doCopy':
+                            if (copyIdList.length < 1) {
+                                layer.msg("待复制列表为空！");
+                                return;
+                            }
+                            $.ajax({
+                                url: '/WSSComponent/copy',
+                                data: {
+                                   ids: copyIdList, parent: id
+                                },
+                                traditional: true,
+                                dataType: 'JSON',
+                                type: 'POST',
+                                success: function(result) {
+                                    if (result === -1) {
+                                        layer.msg("参数错误");
+                                    } else {
+                                        layer.msg("已复制" + result + "条数据！");
+
+                                        table.reload('fileList', {
+                                            url: '/WSSComponent/folder/' + id
+                                        });
+
+                                        copyIdList = [];
+                                    }
+                                }
+                            });
+                        break;
+                        case 'doMove': 
+                        if (moveIdList.length < 1) {
+                                layer.msg("待移动列表为空！");
+                                return;
+                            }
+                            $.ajax({
+                                url: '/WSSComponent/move',
+                                data: {
+                                   ids: moveIdList, parent: id
+                                },
+                                traditional: true,
+                                dataType: 'JSON',
+                                type: 'POST',
+                                success: function(result) {
+                                    if (result === -1) {
+                                        layer.msg("参数错误");
+                                    } else {
+                                        layer.msg("已移动" + result + "条数据！");
+
+                                        table.reload('fileList', {
+                                            url: '/WSSComponent/folder/' + id
+                                        });
+
+                                        moveIdList = [];
+                                    }
+                                }
+                            });
+                        break;
+                        case 'recover': 
+                            if (table.checkStatus('fileList').data.length === 0) {
+                                layer.msg("数量为空！");
+                            }
+                            let recoverList = [];
+                            $.each(table.checkStatus('fileList').data, function(i, data){
+                                recoverList.push(data.id);
+                            });
+                            $.ajax({
+                                url: '/WSSComponent/recover'
+                                ,data: {recoverList: recoverList}
+                                ,dataType: 'JSON'
+                                ,traditional: true
+                                ,type: 'POST'
+                                ,success: function(result) {
+                                    if (result == -1) {
+                                        layer.msg("参数错误！");
+                                        return;
+                                    }
+                                    layer.msg("成功还原" + result + "条数据", {
+                                        end: window.location.reload()
+                                    });
+                                }
+                            })
+                        break;
+                        case 'delete': 
+                            if (table.checkStatus('fileList').data.length === 0) {
+                                layer.msg("数量为空！");
+                            }
+                            let destoryList = [];
+                            $.each(table.checkStatus('fileList').data, function(i, data){
+                                destoryList.push(data.id);
+                            });
+                            $.ajax({
+                                url: '/WSSComponent/destory'
+                                ,data: {destoryList: destoryList}
+                                ,dataType: 'JSON'
+                                ,traditional: true
+                                ,type: 'POST'
+                                ,success: function(result) {
+                                    if (result == -1) {
+                                        layer.msg("参数错误！");
+                                        return;
+                                    }
+                                    layer.msg("成功删除" + result + "条数据", {
+                                        end: window.location.reload()
+                                    });
+                                }
+                            })
+                        break;
+                        case 'addToCate':
+                            $.post('/category/all', {}, function(result){
+                                let html = '<table class="layui-table">';
+                                let htmlc = '</table>'
+                                $.each(result, function(i, cate){
+                                    html += '<tr><td class="layui-nav-item" data-cateId='+cate.id+' onclick="addToCate(this)">'+cate.name+'</td></tr>';
+                                });
+                                html += htmlc;
+                                //页面层
+                                layer.open({
+                                    title: '添加到分类',
+                                    type: 1,
+                                    skin: '', 
+                                    area: ['240px', '240px'], //宽高
+                                    content: html
+                                });
+                            });
+                        break;
+                        case 'delCate': 
+                            if (cateId === null || cateId === undefined) {
+                                return;
+                            }
+                            $.ajax({
+                                url: '/category/del'
+                                ,data: {cateId: cateId}
+                                ,dateType: 'JSON'
+                                ,type: 'POST'
+                                ,success: function(resp){
+                                    if (resp === -1) {
+                                        layer.msg("参数错误！");
+                                    } else {
+                                        layer.msg("删除该分类成功！", {
+                                            end: window.location.reload()
+                                        });
+                                    }
+                                }
+                            });
+                        break;
+                        case 'delFromCate': 
+                            if (table.checkStatus('fileList').data.length === 0) {
+                                layer.msg("数量为空！");
+                            }
+                            let ids = [];
+                            $.each(table.checkStatus('fileList').data, function(i, data){
+                                ids.push(data.id);
+                            });
+                            $.ajax({
+                                url: '/category/delFromCate',
+                                data: {'ids': ids},
+                                dataType: 'JSON',
+                                type: 'POST',
+                                traditional: true,
+                                success: function(resp) {
+                                    if (resp.size === -1) {
+                                        layer.msg("参数错误!");
+                                    } else {
+                                        layer.closeAll();
+                                        layer.msg("已移除" + resp.size + "条数据");
+                                        table.reload('fileList', {
+                                            url: '/WSSComponent/category/' + cateId
+                                        });
+                                    }
+                                }
+                            });
+                        break;
+                        case 'share':
+                            if (checkStatus.data.length !== 1) {
+                                layer.msg("请选择一条数据！");
+                            } else {
+                                let id = checkStatus.data[0].id;
+                                $.ajax({
+                                    url: '/WSSComponent/shareUrl/' + id,
+                                    type: 'POST',
+                                    dataType: 'JSON',
+                                    success: function(result){
+                                        if (result.code === -1) {
+                                            layer.msg("参数错误!");
+                                        } else {
+                                            let html = '<div class="layui-form" action=""><div class="layui-form-item"><div class="layui-input-inline"><input type="text" name="shareUrl" value="'+result.shareUrl+'" class="layui-input"/></div><button class="layui-btn" onclick="copyUrl()">复制链接</button></div><div class="layui-form-item"><label class="layui-form-label" style="color:#a1a1a1;width:100px">链接有效期7天</label></div></div>'
+                                            layer.open({
+                                                type: 0,
+                                                title: '分享文件(夹):'+ checkStatus.data[0].name,
+                                                area: ['360px', '240px'],
+                                                content: html
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+
+                        break;
+                    }        
+                });
+
+                table.on('edit(fileList)', function(obj){ //注：edit是固定事件名，test是table原始容器的属性 lay-filter="对应的值"
+                    console.log(obj.value); //得到修改后的值
+                    console.log(obj.field); //当前编辑的字段名
+                    console.log(obj.data); //所在行的所有相关数据
+
+                    let id = obj.data.id;
+                    let name = obj.value;
+                    let type = obj.data.type;
+
+                    $.ajax({
+                        url: '/WSSComponent/rename',
+                        data: {'id': id, 'name': name, 'type': type},
+                        dataType: 'JSON',
+                        type: 'POST',
+                        success: function(result){
+                            let msg;
+                                                  
+                            switch (result) {
+                                case -1: msg = '参数错误！';break;
+                                case 0: msg = '无记录！';break;
+                                case 1: msg = '重命名成功！';break;
+                                case -2: msg = '名称重复！';break;
+                            }
+                            layer.msg(msg);
+                            table.reload("fileList", {
+                                url: '/WSSComponent/folder' + (parentId.length === 0 ? '' : ('/' + peek(parentId))),
+                            })
+                        }
+                    });
+                });
+
+                table.on('checkbox(fileList)', function(obj){
+                    let html = table.checkStatus('fileList').data.length === 0 ? '<button class="layui-btn layui-btn-sm" lay-event="return">返回上一级</button><button class="layui-btn layui-btn-sm" lay-event="addFolder">新建文件夹</button>' : '<button class="layui-btn layui-btn-sm" lay-event="return">返回上一级</button><button class="layui-btn layui-btn-sm" lay-event="addFolder">新建文件夹</button><button class="layui-btn layui-btn-sm" lay-event="download">下载</button><button class="layui-btn layui-btn-sm" lay-event="discard">删除</button><button class="layui-btn layui-btn-sm" lay-event="move">移动</button><button class="layui-btn layui-btn-sm" lay-event="copy">复制</button><button class="layui-btn layui-btn-sm" lay-event="share">分享</button>';
+                    $(".layui-table-tool .layui-btn-container").html(html);
+                    doFixToolbar();
+                });
+            });
+            
+            function changeFileDisplay(id) {
+                parentId.push(id);
+                console.log(parentId);
+                
+                table.reload("fileList", {
+                    url: '/WSSComponent/folder/' + id,
+                })
+                doFixToolbar();
+            }
+
+            function peek(obj) {
+                let tmp = obj.pop();
+                if (tmp !== null && tmp !== undefined) {
+                    obj.push(tmp);
+                }
+                return tmp;
+            }
+
+            function doFixToolbar() {
+                let toobar = $(".layui-table-tool .layui-btn-container");
+                let showcancel = false;
+                if (moveIdList.length > 0) {
+                    toobar.append('<button class="layui-btn layui-btn-sm" id="btn_doMove" lay-event="doMove">移动至</button>');
+                    showcancel = true;
+                }
+                if (copyIdList.length > 0) {
+                    toobar.append('<button class="layui-btn layui-btn-sm" id="btn_doCopy" lay-event="doCopy">复制至</button>');
+                    showcancel = true;
+                }
+                if (showcancel) {
+                    toobar.append('<button class="layui-btn layui-btn-sm" id="btn_cancel" lay-event="cancel">取消</button>');
+                }
+                let allFile = true;
+                $.each(table.checkStatus('fileList').data, function(i, data){
+                    if (data.type === 'folder') {
+                        allFile = false;
+                        return false;
+                    }
+                });
+                if (allFile && table.checkStatus('fileList').data.length > 0) {
+                    toobar.append('<button class="layui-btn layui-btn-sm" id="btn_addToCate" lay-event="addToCate">添加到分类</button>');
+                }
+            }
+
+            function toBin() {
+                $("#uploadBar").hide();
+                table.on('checkbox(fileList)', function(obj){
+                    let html = table.checkStatus('fileList').data.length === 0 ? '' : '<button class="layui-btn layui-btn-sm" lay-event="recover">还原</button><button class="layui-btn layui-btn-sm" lay-event="delete">彻底删除</button>';
+                    $(".layui-table-tool .layui-btn-container").html(html);
+                });
+                table.render({
+                    elem: '#fileList'
+                    ,limit:'10000'
+                    ,skin:'line'
+                    ,height: 'full-110'
+                    ,url: '/WSSComponent/bin'
+                    ,toolbar: '#toolbarBin'
+                    ,defaultToolbar: []
+                    ,cols:[
+                        [{width:'5%', type:'checkbox'}
+                    ,{field:'id', width:'5%', hide: 'true'}
+                    ,{field:'type', width:'5%', hide: 'true'}
+                    ,{field:'name', width: '50%', sort: true, templet: '#titleTplBin', style: 'font-size: 16px;', title: '文件名'}
+                    ,{field:'remain', width:'20%', sort: true, style: 'font-size: 16px;',title: '保留时效(天)'}
+                    ,{field:'deleteTime', width:'25%', sort: true, style: 'font-size: 16px;',title: '删除时间'}]
+                    ]
+                })
+            }
+
+            function copyUrl(){
+                let input = $('input[name=shareUrl]');
+                input.select();
+                if (document.execCommand('copy')) {
+                    layer.msg("复制成功！");
+                }
+            }
+        </script>
+        <script>
+            var cateId;
+            function toCate(id) {
+                cateId = id;
+                $("#uploadBar").hide();
+                table.on('checkbox(fileList)', function(obj){
+                    let html = table.checkStatus('fileList').data.length === 0 ? '<button class="layui-btn layui-btn-sm" lay-event="delCate">移除该分类</button>' : '<button class="layui-btn layui-btn-sm" lay-event="delCate">移除该分类</button><button class="layui-btn layui-btn-sm" lay-event="download">下载</button><button class="layui-btn layui-btn-sm" lay-event="discard">删除</button><button class="layui-btn layui-btn-sm" lay-event="delFromCate">从分类中移除</button>';
+                    $(".layui-table-tool .layui-btn-container").html(html);
+                });
+                table.render({
+                    elem: '#fileList'
+                    ,height: 'full-165'
+                    ,limit:'10000'
+                    ,skin:'line'
+                    ,height: 'full-125'
+                    ,url: '/WSSComponent/category/' + id
+                    ,toolbar: '#toolbarBin'
+                    ,defaultToolbar: []
+                    ,cols:[
+                        [{width:'5%', type:'checkbox'}
+                    ,{field:'id', width:'5%', hide: 'true'}
+                    ,{field:'name', width: '60%', sort: true, edit:
+                                'text', templet: '#titleTpl', style: 'font-size: 16px;', title: '文件名'}
+                    ,{field:'type', hide: true}
+                    ,{field:'size', width:'10%', sort: true, style: 'font-size: 16px;',title: '大小'}
+                    ,{field:'updateTime', width:'25%', sort: true, style: 'font-size: 16px;',title: '修改时间'}]
+                    ]
+                });
+                $(".layui-table-tool .layui-btn-container").append('<button class="layui-btn layui-btn-sm" lay-event="delCate">移除该分类</button>');
+            }
+
+            function addCategory(){
+                layer.prompt({
+                    value: '',
+                    title: '请输入分类名',
+                    area: ['800px', '350px'] //自定义文本域宽高
+                    }, function(value, index, elem){
+                    layer.close(index);
+                    $.ajax({
+                        url: '/category/add',
+                        data: {'name': value},
+                        dataType: 'JSON',
+                        type: 'POST',
+                        success: function(resp) {
+                            if (resp === -1) {
+                                layer.msg("参数错误或名称重复");
+                            } else {
+                                window.location.reload();
+                            }
+                        }
+                    });
+                });
+            }
+
+            function addToCate(obj) {
+                if (table.checkStatus('fileList').data.length === 0) {
+                    layer.msg("数量为空！");
+                }
+                let ids = [];
+                $.each(table.checkStatus('fileList').data, function(i, data){
+                    ids.push(data.id);
+                });
+                let cateId = $(obj).data('cateid');
+                let id = peek(parentId);
+                id = id === undefined ? '' : id;
+                $.ajax({
+                    url: '/category/addToCate',
+                    data: {'ids': ids, 'cateId': cateId},
+                    dataType: 'JSON',
+                    type: 'POST',
+                    traditional: true,
+                    success: function(resp) {
+                        if (resp.size === -1) {
+                            layer.msg("参数错误!");
+                        } else {
+                            layer.closeAll();
+                            layer.msg("已添加" + resp.size + "条数据至" + resp.name);
+                            table.reload('fileList', {
+                                url: '/WSSComponent/folder/' + id
+                            });
+                        }
+                    }
+                });
+            }
+        </script>
+        <script>
+            function search(){
+                let keyword = $("input[name=keyword]").val();
+                if (keyword === "") {
+                    layer.msg("搜索关键词为空！");
+                    return;
+                }
+                parentId = [];
+                table.reload('fileList', {
+                    url: '/WSSComponent/search/' + keyword
+                });
+            }
+        </script>
+        <script type="text/javascript">
+
+            var layerDoc;   //上传窗口doc对象
+            var layerWin;   //上传窗口window对象
+            var path;       //上传路径
+            var paths = [];
+            var features = [];  //上传文件MD5
+
+            WebUploader.Uploader.register({
+            'before-send-file': 'beforeSendFile' //整个文件上传前
+            }, {
+                beforeSendFile: function( file ) {
+                    var that = this;
+                    var deferred = WebUploader.Deferred();
+                    //上传前请求服务端,判断文件是否已经上传过
+                    uploader.md5File( file ).then(function(val) {
+                        $.ajax({
+                            url: '/file/checkRepeat',
+                            data: {'feature': val},
+                            dataType: 'JSON',
+                            async: false,
+                            type: 'POST',
+                            success: function(result){                          
+                                if (result){
+                                    uploader.skipFile(file, true);
+                                    $(layerDoc).find('#' + file.id).children('.status').html('秒传');
+                                    $(layerDoc).find("#" + file.id).css('background', '#a6f387');
+                                }
+                                // 继续后面行为
+                                deferred.resolve();
+                            }
+                        });
+                        features[file.id] = val;
+                        console.log('feature:' + val);
+                    });
+                    return deferred.promise();
+                }
+            });
+            
+            WebUploader.Uploader.register({
+            'after-send-file': 'afterSendFile' //所有分片上传后
+            }, {
+                afterSendFile: function( file ) {
+                    
+                    console.log("=============file "+file.name+" merge start========");
+                    var that = this;
+                    var deferred = WebUploader.Deferred();
+                    let chunks = parseInt(file.size / uploader.option('chunkSize')) + 1;
+                    let folderPath = file.source.source.webkitRelativePath;
+                    //文件合并
+                    let url = '/WSSComponent/folder' + (paths[file.id] === '' ? '' : ('/' + paths[file.id]));
+                    console.log(url);
+                    console.log(parentId);
+                    
+                    if (file.skipped) {
+                        $.ajax({
+                            url: '/WSSComponent/save',
+                            data: {'fileName': file.name,  'folderId': paths[file.id], 'folderPath': folderPath ? folderPath : '', feature: features[file.id]},
+                            dataType: 'JSON',
+                            type: 'POST',
+                            success: function(result){
+                                if (result === -1) {
+                                    layer.msg("参数错误！");
+                                }
+                                if (result === 1) {
+                                    window.table.reload("fileList", {
+                                        url: url
+                                    })
+                                    if (peek(parentId) !== paths[file.id]) {
+                                        parentId.push(paths[file.id]);
+                                    }
+                                }
+                            }
+                        });
+                        return;
+                    }
+
+                    $.ajax({
+                        url: '/file/merge',
+                        data: {'feature': features[file.id], 'fileName': file.name, 'chunks': chunks, 'folderId': paths[file.id], 'folderPath': folderPath ? folderPath : ''},
+                        dataType: 'JSON',
+                        type: 'POST',
+                        success: function(result){                          
+                            if (!result){
+                                layer.msg(file.name + "上传失败！");
+                            }
+                            window.table.reload("fileList", {
+                                url: url
+                            })
+                            if (peek(parentId) !== paths[file.id]) {
+                                parentId.push(paths[file.id]);
+                            }
+                            
+                            // 继续后面行为
+                            deferred.resolve();
+                        }
+                    });
+                    return deferred.promise();
+                }
+            });
+            var uploader = WebUploader.create({
+                auto: false,    //自动上传
+                swf: '../static/webuploader-0.1.5/Uploader.swf',    // swf文件路径
+                server: 'http://localhost:8088/file/uploadDirectory',  // 文件接收服务端。
+                // 选择文件的按钮。可选。
+                // 内部根据当前运行是创建，可能是input元素，也可能是flash.
+                pick: {
+                    id: '#picker',
+                    innerHTML: "上传文件"
+                },
+                // 不压缩image, 默认如果是jpeg，文件上传前会压缩一把再上传！
+                resize: false,
+                chunked: true,
+                chunkSize: 500 * 1024,    //5M
+                duplicate: true     //去重
+            });
+
+            //添加文件夹上传
+            uploader.addButton({
+                id: '#pickers',
+                innerHTML: "上传文件夹"
+            });
+            
+            //文件加入队列前事件
+            uploader.on("beforeFileQueued", function(file){
+                paths[file.id] = path;
+            });
+
+            uploader.on("fileQueued", function(file){
+                
+            });
+
+            uploader.on("filesQueued", function(files){
+
+                if (layerDoc == undefined) {
+                    layer.open({
+                        id: 'uploadview',
+                        type: 2,
+                        title: '文件上传',
+                        offset: "rb",
+                        shadeClose: true,
+                        shade: false,
+                        maxmin: true, //开启最大化最小化按钮
+                        area: ['600px', '400px'],
+                        content: '/uploadview',
+                        success: function(layero, index){
+                            layerDoc = $(layero).children("div.layui-layer-content").children("iframe").prop("contentDocument");
+                            layerWin = $(layero).children("div.layui-layer-content").children("iframe").prop("contentWindow");
+                            renderUploadView(files);
+                            uploadFiles(files);
+                        },
+                        end: function(){
+                            uploader.reset();
+                            layerDoc = undefined;
+                            layerWin = undefined;
+                        }
+                    });
+                } else {
+                    renderUploadView(files);
+                    uploadFiles(files);
+                }
+            });
+
+            function renderUploadView(files) {
+                console.log('render begin');
+
+                let tbody = $(layerDoc).find("table").children("tbody");              
+                
+                $.each(files, function(i, file){
+                    let tr = "<tr id="+file.id+" class='task'><td><p class='text-elllisis'>"+file.name+"</p></td><td>"+file.size+"</td><td><p class='text-elllisis'>"+path+"</p></td><td class='status'>等待中</td></tr>";
+                    tbody.append(tr);
+                });
+            }
+
+            function uploadFiles(files) {
+                console.log('upload begin');
+
+                $.each(files, function(i, file){
+                    uploader.upload(file);
+                });
+            }
+
+            function pause(obj){
+                let fid = $(obj).parents('tr.task').attr('id');
+
+                console.log('pause file:' + fid + ' status:' + uploader.getFile(fid).getStatus());
+                
+                if (uploader.getFile(fid).getStatus() != 'progress') {
+                    return;
+                }
+
+                $(obj).attr('class', "resumeBtn").text('继续').unbind('click').bind('click', function(event){
+                    resume(event.currentTarget);
+                });
+                
+                uploader.stop(true);
+
+                console.log('after stop status:' + uploader.getFile(fid).getStatus());
+            }
+
+            function resume(obj){
+                let fid = $(obj).parents('tr.task').attr('id');
+
+                console.log('resume file:' + fid + ' status:' + uploader.getFile(fid).getStatus());
+
+                if (uploader.getFile(fid).getStatus() != 'interrupt') {
+                    return;
+                }
+                
+                $(obj).attr('class', "pauseBtn").text('暂停').unbind('click').bind('click', function(event){
+                    pause(event.currentTarget);
+                });
+
+                uploader.upload();
+
+                console.log('after resume status:' + uploader.getFile(fid).getStatus());
+            }
+
+            function cancel(obj){
+                let fid = $(obj).parents('tr.task').attr('id');
+                console.log('cancel file:' + fid + ' status:' + uploader.getFile(fid).getStatus());
+                uploader.cancelFile(fid);
+                console.log('status after canceled: '+ uploader.getFile(fid).getStatus());
+                
+                $(obj).parents('.task').remove();
+            }
+
+            uploader.on("uploadBeforeSend", function(object, data, headers){              
+                if (path == undefined) {
+                    return false;
+                }               
+
+                //添加上传参数
+                data.path = path;
+                data.feature = features[data.id];
+
+                console.log('正在上传文件：'+ data.id + ' 分片号：'+data.chunk+'总分片数：'+data.chunks);
+                
+            });
+
+            uploader.on("uploadAccept", function(object, ret){
+                console.log('服务器响应：'+object.id+ ' 收到分片号：'+object.chunk+'总分片数：'+object.chunks);
+                
+            });
+
+            uploader.on("uploadStart", function(file){
+                console.log("upload start:" + file.id);
+            });
+
+            uploader.on("uploadProgress", function(file, progress){
+                $(layerDoc).find("#" + file.id).css('background', 'linear-gradient(to right, #cbe5f3 ' + progress * 100 + '%,#ffffff 0%)');
+                if (progress == 1) {
+                    $(layerDoc).find("#" + file.id).css('background', '#a6f387');
+                    $(layerDoc).find("#" + file.id + ">td.status").text('完成');
+                }
+
+                //修改任务等待状态
+                let tr = $(layerDoc).find('#' + file.id);
+                if ($(tr).find('td.status').text() == '等待中') {
+                    $(tr).find('td.status').html('<a href="javascript:void(0);" class="pauseBtn">暂停</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:void(0);" class="cancelBtn">取消</a>');
+                    $(tr).find('a.pauseBtn').click(function(event){
+                        pause(event.currentTarget);
+                    });
+                    $(tr).find('a.cancelBtn').click(function(event){
+                        cancel(event.currentTarget);
+                    });
+                }
+            });
+
+            uploader.on("uploadSuccess", function(file, response){
+                console.log("upload success:" + file.id);
+            });
+
+            uploader.on("stopUpload", function(){
+            });
+
+            uploader.on("uploadFinished", function(){
+                console.log("upload finished");
+                
+            });
+
+        </script>
+        <script  type="text/javascript">
+            window.onload = function(){
+                $("#pickers").find("input[type=file]").attr("webkitdirectory", "");
+
+                $(".webuploader-container input[type=file]").css("display", "none");
+
+                $(".webuploader-container label").unbind("click");
+                $(".webuploader-container label").bind("click", function(event){
+                    let checkStatus = window.table.checkStatus("fileList");
+                    if (checkStatus.data.length > 1) {
+                        layer.msg("请选择一条数据！");
+                    } else if (checkStatus.data.length === 1 && checkStatus.data[0].type === 'userfile') {
+                        layer.msg("请选择文件夹！");
+                    } else {
+                        if (checkStatus.data.length === 0) {
+                            layer.msg("未选择目标文件夹，上传目录为根目录！");
+                            path = '';
+                        } else {
+                            path = checkStatus.data[0].id;
+                        }
+                        let input = $(event.currentTarget).siblings("input[type=file]");
+                        input.trigger("click");
+                    }
+                });
+            }
+        </script>
+    </div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <base href="http://localhost:8088/">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>文件</title>
+    <link rel="stylesheet" href="../static/layui/css/layui.css">
+</head>
+<body>
+    <a href="/">返回</a>
+    <div th:if="${type} eq null">
+        <p>该格式文件不支持打开</p>
+    </div>
+    <div th:if="${type} eq text">
+        <textarea th:text="${textContent}" style="width: 100%;height: 600px;"></textarea>
+    </div>
+    <div th:if="${type} eq audio">
+        <audio controls autoplay>
+            <source th:src="${location}" type="audio/ogg">
+            <source th:src="${location}" type="audio/mpeg">
+            <source th:src="${location}" type="audio/wav">
+            您的浏览器不支持 audio 元素。
+        </audio>
+    </div>
+    <div th:if="${type} eq video">
+        <video width="100%" height="600" controls>
+            <source th:src="${location}" type="video/mp4">
+            <source th:src="${location}" type="video/ogg">
+            <source th:src="${location}" type="video/webm">
+          您的浏览器不支持 video 标签。
+        </video>
+    </div>
+    <div th:if="${type} eq img">
+        <img th:src="${location}" style="width: 100%;">
+    </div>
+    <div th:if="${type} eq swf">
+        <embed th:src="${location}" width="100%" height="600">
+    </div>
+</body>
+</html>

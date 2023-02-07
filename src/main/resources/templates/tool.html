@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+
+    <body>
+        <div class="layui-container" th:fragment="tool">
+            <div class="row" style="margin-top: 250px;">
+                <div class="layui-card layui-col-md5" id="tool-del-repeat" onclick="delRepeat()">
+                    <div class="layui-card-header">删除重复文件</div>
+                    <div class="layui-card-body">
+                      网盘内可能多个文件引用同一个文件实体<br>
+                      删除重复文件可以帮你删除那些不必要的多余副本
+                    </div>
+                </div>
+                <div class="layui-card layui-col-md5 layui-col-md-offset2" id="tool-del-empty" onclick="delEmpty()">
+                    <div class="layui-card-header">删除空文件夹</div>
+                    <div class="layui-card-body">
+                      网盘内的文件夹内没有文件<br>
+                      那它的作用也大大减少，不如将其删除
+                    </div>
+                </div>
+            </div>
+            <script>
+                layui.use('util', function(){
+                    window.util = layui.util;
+                })
+                function delRepeat(){
+                    layer.confirm('确认执行吗?', {icon: 3, title:'提示'}, function(index){
+                        $.ajax({
+                            url: '/WSSComponent/tool/delRepeat',
+                            dataType: 'JSON',
+                            type: 'POST',
+                            success: function(result){
+                                layer.close(index);
+                                layer.msg("已移除"+result+"个重复文件至回收站！");
+                            }
+                        });
+                    });
+                }
+    
+                function delEmpty(){
+                    layer.confirm('确认执行吗?', {icon: 3, title:'提示'}, function(index){
+                        $.ajax({
+                            url: '/WSSComponent/tool/delEmpty',
+                            dataType: 'JSON',
+                            type: 'POST',
+                            success: function(result){
+                                layer.close(index);
+                                layer.msg("已移除"+result+"个空文件夹至回收站！");
+                            }
+                        });
+                    });
+                }
+            </script>
+        </div>
+    </body>
+
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <style>
+        .fly-header{
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 10000;
+            width: 100%;
+            height: 60px;
+            border-bottom: 1px solid #404553;
+            border-right: 1px solid #404553;
+            border-radius: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-row fly-header" th:fragment="head"  style="background-color: #393d49;">
+        <div class="layui-logo layui-col-md2">
+            <a style="display: block;"><img src="../static/images/logo.png" style="height: 60px;"></a>
+        </div>
+        <ul class="layui-nav layui-col-md4" lay-filter="nav">
+            <li class="layui-nav-item layui-this"><a href="javascript:;" data-id='key-1'>网盘</a></li>
+            <li class="layui-nav-item"><a href="javascript:;" data-id='key-2'>通知<span class="layui-badge" th:text="${unread}" th:style="'display:' + @{(${unread} eq 0 ? 'none' : 'inline-block')} + ''"></span></a></li>
+            <li class="layui-nav-item"><a href="javascript:;" data-id='key-3'>工具</a></li>
+        </ul>
+        <ul class="layui-nav layui-col-md2 layui-col-md-offset4" lay-filter="">
+            <li class="layui-nav-item layui-col-mdoffset6">
+                <a href="javascript:;" th:text="${user.name}"></a>
+                <dl class="layui-nav-child">
+                <dd><a href="javascript:;">个人信息</a></dd>
+                <dd><a href="/user/logout">切换账户</a></dd>
+                </dl>
+            </li>
+        </ul>
+
+        <script type="text/javascript">
+            layui.use('element', function(){
+                var element = layui.element;
+
+                element.on('nav(nav)', function(elem){
+                    $("div.nav-content").css("display", "none");
+                    let id = $(elem).data("id");
+                    $("#"+id).css("display", "block");
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>
