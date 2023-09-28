@@ -12,21 +12,17 @@ import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import zyz.wss.constant.LoginConst;
 import zyz.wss.model.entity.Token;
 import zyz.wss.service.UserService;
 import zyz.wss.util.VerificationCodeUtil.VerificationCode;
 
-@Controller
+@RestController
 @RequestMapping("/user")
 public class UserController {
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
@@ -34,14 +30,12 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    @ResponseBody
     @RequestMapping(value = "/regist", method = RequestMethod.POST)
     public Map<String, Object> regist(@RequestParam String name, @RequestParam String email,
             @RequestParam String password) {
         return userService.regist(name, email, password);
     }
 
-    @ResponseBody
     @RequestMapping(value = "/login", method = RequestMethod.POST)
     public Map<String, Object> login(@RequestParam String nameOrEmail, @RequestParam String password,
             HttpServletRequest req, HttpServletResponse resp) {
@@ -73,8 +67,6 @@ public class UserController {
     public void getMethodName(HttpServletResponse resp, @RequestParam String id) {
         VerificationCode code = userService.generateVCode(id);
 
-        
-
         resp.setHeader("Prama", "no-cache");
         resp.setHeader("Cache-Control", "no-cache");
         resp.setDateHeader("Expires", 0);
@@ -88,7 +80,6 @@ public class UserController {
         }
     }
 
-    @ResponseBody
     @PostMapping(value = "/verifyCheck")
     public boolean verifyCheck(String id, String answer) {
         return userService.checkVerificationCode(id, answer);

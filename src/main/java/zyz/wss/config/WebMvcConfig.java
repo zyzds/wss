@@ -27,12 +27,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(pi)
+/*        registry.addInterceptor(pi)
             .excludePathPatterns("/error", "/static/**");
         registry.addInterceptor(lri)
                 .excludePathPatterns("/error", "/static/**",
                  "/reglogin", "/user/**");
-        WebMvcConfigurer.super.addInterceptors(registry);
+        WebMvcConfigurer.super.addInterceptors(registry);*/
     }
 
     @Override

@@ -205,8 +205,11 @@
 
         $("#form-login").submit(function () {
             $.ajax({
-                url: "/user/login",
+                url: "/login",
                 type: "POST",
+                headers: {
+                    "X-XSRF-TOKEN": getCookies()["XSRF-TOKEN"]
+                },
                 dataType: "json",
                 data: $("#form-login").serialize(),
                 success: function (result) {
@@ -219,8 +222,17 @@
                     }
                 }
             });
-        return false;
-    });
+            return false;
+        });
+
+        function getCookies() {
+            var map = {};
+            document.cookie.split("; ").forEach(function(e){
+                var info = e.split("=");
+                map[info[0]] = info[1];
+            })
+            return map;
+        }
     </script>
 </body>
 </html>

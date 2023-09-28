@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
@@ -29,7 +30,7 @@ import zyz.wss.util.VerificationCodeUtil.VerificationCode;
 import zyz.wss.util.WssUtil;
 
 @Service
-public class UserServiceImpl implements UserService, ApplicationEventPublisherAware {
+public class UserServiceImpl implements UserService, ApplicationEventPublisherAware, InitializingBean {
 
     @Autowired
     private UserRepository userRepository;
@@ -155,4 +156,15 @@ public class UserServiceImpl implements UserService, ApplicationEventPublisherAw
         return code;
     }
 
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        if (this.userRepository.findByName("admin") == null) {
+            User admin = new User();
+            admin.setName("admin");
+            admin.setPassword(WssUtil.MD5Encode("0"));
+            admin.setRegistTime(new Date());
+            admin.setType(User.UserType.ADMIN);
+            this.userRepository.save(admin);
+        }
+    }
 }

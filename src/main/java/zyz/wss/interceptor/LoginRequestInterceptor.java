@@ -17,10 +17,10 @@ public class LoginRequestInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        if (hostHolder.get() == null) {
+/*        if (hostHolder.get() == null) {
             response.sendRedirect("/reglogin");
             return false;
-        }
+        }*/
         return true;
     }
 

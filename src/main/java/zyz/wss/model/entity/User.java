@@ -1,13 +1,9 @@
 package zyz.wss.model.entity;
 
 import java.util.Date;
+import java.util.List;
 
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 
 import org.hibernate.annotations.Type;
 
@@ -35,6 +31,13 @@ public class User {
     @Type(type = "yes_no")
     private Boolean active = false;
     private Date registTime;
+    @ManyToMany(cascade = CascadeType.REMOVE)
+    @JoinTable(
+            name = "user_authority",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "auth_id")
+    )
+    private List<Authority> authorities;
 
     //getter and setter...
     public Integer getId() {
